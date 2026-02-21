@@ -145,7 +145,7 @@ class GetVideoComponents(io.ComfyNode):
         return io.Schema(
             node_id="GetVideoComponents",
             search_aliases=["extract frames", "split video", "video to images", "demux"],
-            display_name="Get Video Components",
+            display_name="Extract frame",
             category="image/video",
             essentials_category="Video Tools",
             description="Extracts all components from a video: frames, audio, and framerate.",
