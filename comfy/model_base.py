@@ -50,6 +50,7 @@ import comfy.ldm.omnigen.omnigen2
 import comfy.ldm.qwen_image.model
 import comfy.ldm.kandinsky5.model
 import comfy.ldm.anima.model
+import comfy.ldm.trellis2.model
 import comfy.ldm.ace.ace_step15
 
 import comfy.model_management
@@ -1465,6 +1466,16 @@ class WAN22(WAN21):
 
     def scale_latent_inpaint(self, sigma, noise, latent_image, **kwargs):
         return latent_image
+
+class Trellis2(BaseModel):
+    def __init__(self, model_config, model_type=ModelType.FLOW, device=None, unet_model=comfy.ldm.trellis2.model.Trellis2):
+        super().__init__(model_config, model_type, device, unet_model)
+
+    def extra_conds(self, **kwargs):
+        out = super().extra_conds(**kwargs)
+        embeds = kwargs.get("embeds")
+        out["embeds"] = comfy.conds.CONDRegular(embeds)
+        return out
 
 class Hunyuan3Dv2(BaseModel):
     def __init__(self, model_config, model_type=ModelType.FLOW, device=None):
