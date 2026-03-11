@@ -472,6 +472,26 @@ def get_save_image_path(filename_prefix: str, output_dir: str, image_width=0, im
         counter = 1
     return full_output_folder, filename, counter, subfolder, filename_prefix
 
+def get_model_placeholder(folder_name: str) -> str:
+    """Generate placeholder text for empty model dropdowns.
+
+    Args:
+        folder_name: The name of the model folder (e.g., "checkpoints", "loras").
+
+    Returns:
+        A user-friendly placeholder string indicating where models should be placed.
+    """
+    folder_name = map_legacy(folder_name)
+    try:
+        paths = get_folder_paths(folder_name)
+    except KeyError:
+        paths = []
+
+    if paths:
+        return f"No models found — add to: {paths[0]}"
+    return f"No models found for '{folder_name}'..."
+
+
 def get_input_subfolders() -> list[str]:
     """Returns a list of all subfolder paths in the input directory, recursively.
 
