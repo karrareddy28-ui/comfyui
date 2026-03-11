@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import TypedDict
+import json
+import logging
 import os
 import folder_paths
 import glob
@@ -90,15 +92,58 @@ class SubgraphManager:
         return subgraphs_dict
 
     async def get_blueprint_subgraphs(self, force_reload=False):
-        """Load subgraphs from the blueprints directory."""
+        """Load subgraphs from the blueprints directory using index.json for discovery."""
         if not force_reload and self.cached_blueprint_subgraphs is not None:
             return self.cached_blueprint_subgraphs
 
         subgraphs_dict: dict[SubgraphEntry] = {}
         blueprints_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'blueprints')
 
-        if os.path.exists(blueprints_dir):
+        index_path = os.path.join(blueprints_dir, "index.json")
+        if os.path.isfile(index_path):
+            try:
+                with open(index_path, "r", encoding="utf-8") as f:
+                    categories = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                logging.error("Failed to load blueprint index %s: %s", index_path, e)
+                categories = []
+
+            if not isinstance(categories, list):
+                logging.error("Blueprint index.json is not a list: %s", index_path)
+                categories = []
+
+            for category in categories:
+                module_name = category.get("moduleName", "default")
+                for blueprint in category.get("blueprints", []):
+                    name = blueprint.get("name")
+                    if not name:
+                        logging.warning("Blueprint entry missing 'name' in category '%s', skipping", module_name)
+                        continue
+
+                    filename = f"{name}.json"
+                    filepath = os.path.realpath(os.path.join(blueprints_dir, filename))
+                    if not filepath.startswith(os.path.realpath(blueprints_dir) + os.sep):
+                        logging.warning("Blueprint path escapes blueprints directory: %s", filepath)
+                        continue
+
+                    if not os.path.isfile(filepath):
+                        logging.warning("Blueprint file not found: %s", filepath)
+                        continue
+
+                    entry_id, entry = self._create_entry(filepath, Source.templates, module_name)
+                    info = entry["info"]
+                    include_on = blueprint.get("includeOnDistributions")
+                    if include_on is not None:
+                        info["includeOnDistributions"] = include_on
+                    requires = blueprint.get("requiresCustomNodes")
+                    if requires is not None:
+                        info["requiresCustomNodes"] = requires
+                    subgraphs_dict[entry_id] = entry
+        elif os.path.exists(blueprints_dir):
+            logging.warning("No blueprint index.json found at %s, falling back to glob", index_path)
             for file in glob.glob(os.path.join(blueprints_dir, "*.json")):
+                if os.path.basename(file) == "index.json":
+                    continue
                 file = file.replace('\\', '/')
                 entry_id, entry = self._create_entry(file, Source.templates, "comfyui")
                 subgraphs_dict[entry_id] = entry
