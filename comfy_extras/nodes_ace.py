@@ -42,7 +42,7 @@ class TextEncodeAceStepAudio15(io.ComfyNode):
                 io.Int.Input("bpm", default=120, min=10, max=300),
                 io.Float.Input("duration", default=120.0, min=0.0, max=2000.0, step=0.1),
                 io.Combo.Input("timesignature", options=['2', '3', '4', '6']),
-                io.Combo.Input("language", options=["en", "ja", "zh", "es", "de", "fr", "pt", "ru", "it", "nl", "pl", "tr", "vi", "cs", "fa", "id", "ko", "uk", "hu", "ar", "sv", "ro", "el"]),
+                io.Combo.Input("language", options=['en', 'zh', 'es', 'hi', 'ar', 'pt', 'fr', 'ru', 'de', 'ja', 'ko', 'yue', 'vi', 'it', 'tr', 'pl', 'nl', 'id', 'th', 'ms', 'fa', 'uk', 'ro', 'cs', 'sv', 'hu', 'el', 'da', 'fi', 'no', 'he', 'sk', 'bg', 'hr', 'sr', 'lt', 'ca', 'ta', 'bn', 'ur', 'pa', 'sw', 'te', 'tl', 'az', 'ne', 'ht', 'is', 'la', 'sa', 'unknown']),
                 io.Combo.Input("keyscale", options=[f"{root} {quality}" for quality in ["major", "minor"] for root in ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"]]),
                 io.Boolean.Input("generate_audio_codes", default=True, tooltip="Enable the LLM that generates audio codes. This can be slow but will increase the quality of the generated audio. Turn this off if you are giving the model an audio reference.", advanced=True),
                 io.Float.Input("cfg_scale", default=2.0, min=0.0, max=100.0, step=0.1, advanced=True),
