@@ -885,6 +885,10 @@ def set_attr(obj, attr, value):
     return prev
 
 def set_attr_param(obj, attr, value):
+    # Clone inference tensors (created under torch.inference_mode) since
+    # their version counter is frozen and nn.Parameter() cannot wrap them.
+    if value.is_inference():
+        value = value.clone()
     return set_attr(obj, attr, torch.nn.Parameter(value, requires_grad=False))
 
 def set_attr_buffer(obj, attr, value):
