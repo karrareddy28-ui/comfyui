@@ -190,7 +190,7 @@ class SaveAnimatedWEBP(IO.ComfyNode):
             category="image/animation",
             inputs=[
                 IO.Image.Input("images"),
-                IO.String.Input("filename_prefix", default="ComfyUI"),
+                IO.String.Input("filename_prefix", default="ComfyUI_%year%%month%%day%-%hour%%minute%%second%"),
                 IO.Float.Input("fps", default=6.0, min=0.01, max=1000.0, step=0.01),
                 IO.Boolean.Input("lossless", default=True),
                 IO.Int.Input("quality", default=80, min=0, max=100),
@@ -227,7 +227,7 @@ class SaveAnimatedPNG(IO.ComfyNode):
             category="image/animation",
             inputs=[
                 IO.Image.Input("images"),
-                IO.String.Input("filename_prefix", default="ComfyUI"),
+                IO.String.Input("filename_prefix", default="ComfyUI_%year%%month%%day%-%hour%%minute%%second%"),
                 IO.Float.Input("fps", default=6.0, min=0.01, max=1000.0, step=0.01),
                 IO.Int.Input("compress_level", default=4, min=0, max=9, advanced=True),
             ],
@@ -489,7 +489,7 @@ class SaveSVGNode(IO.ComfyNode):
                 IO.SVG.Input("svg"),
                 IO.String.Input(
                     "filename_prefix",
-                    default="svg/ComfyUI",
+                    default="svg/ComfyUI_%year%%month%%day%-%hour%%minute%%second%",
                     tooltip="The prefix for the file to save. This may include formatting information such as %date:yyyy-MM-dd% or %Empty Latent Image.width% to include values from nodes.",
                 ),
             ],

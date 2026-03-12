@@ -637,7 +637,7 @@ class SaveGLB(IO.ComfyNode):
                     ],
                     tooltip="Mesh or 3D file to save",
                 ),
-                IO.String.Input("filename_prefix", default="mesh/ComfyUI"),
+                IO.String.Input("filename_prefix", default="mesh/ComfyUI_%year%%month%%day%-%hour%%minute%%second%"),
             ],
             hidden=[IO.Hidden.prompt, IO.Hidden.extra_pnginfo]
         )
