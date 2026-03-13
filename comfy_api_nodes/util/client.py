@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from comfy import utils
 from comfy_api.latest import IO
+from comfy_execution.utils import get_executing_context
 from server import PromptServer
 
 from . import request_logger
@@ -440,6 +441,17 @@ def _display_text(
     status: str | int | None = None,
     price: float | None = None,
 ) -> None:
+    """Send a progress text message to the client for display on a node.
+
+    Assembles status, price, and text lines, then sends them via WebSocket.
+    Automatically retrieves the current prompt_id from the execution context.
+
+    Args:
+        node_cls: The ComfyNode class sending the progress text.
+        text: Optional text content to display.
+        status: Optional status string or code to display.
+        price: Optional price in dollars to display as credits.
+    """
     display_lines: list[str] = []
     if status:
         display_lines.append(f"Status: {status.capitalize() if isinstance(status, str) else status}")
@@ -450,7 +462,9 @@ def _display_text(
     if text is not None:
         display_lines.append(text)
     if display_lines:
-        PromptServer.instance.send_progress_text("\n".join(display_lines), get_node_id(node_cls))
+        ctx = get_executing_context()
+        prompt_id = ctx.prompt_id if ctx is not None else None
+        PromptServer.instance.send_progress_text("\n".join(display_lines), get_node_id(node_cls), prompt_id=prompt_id)
 
 
 def _display_time_progress(

@@ -1230,13 +1230,47 @@ class PromptServer():
         return json_data
 
     def send_progress_text(
-        self, text: Union[bytes, bytearray, str], node_id: str, sid=None
+        self,
+        text: Union[bytes, bytearray, str],
+        node_id: str,
+        prompt_id: Optional[str] = None,
+        sid=None,
     ):
+        """Send a progress text message to the client via WebSocket.
+
+        Encodes the text as a binary message with length-prefixed node_id. When
+        the client supports the ``supports_progress_text_metadata`` feature flag,
+        the prompt_id is always prepended as a length-prefixed field (empty string
+        when None) to ensure consistent binary framing.
+
+        Args:
+            text: The progress text content to send.
+            node_id: The unique identifier of the node sending the progress.
+            prompt_id: Optional prompt/job identifier to associate the message with.
+            sid: Optional session ID to target a specific client.
+        """
         if isinstance(text, str):
             text = text.encode("utf-8")
         node_id_bytes = str(node_id).encode("utf-8")
 
-        # Pack the node_id length as a 4-byte unsigned integer, followed by the node_id bytes
-        message = struct.pack(">I", len(node_id_bytes)) + node_id_bytes + text
+        # Auto-resolve sid to the currently executing client
+        target_sid = sid if sid is not None else self.client_id
 
-        self.send_sync(BinaryEventTypes.TEXT, message, sid)
+        # When client supports the new format, always send
+        # [prompt_id_len][prompt_id][node_id_len][node_id][text]
+        # even when prompt_id is None (encoded as zero-length string)
+        if feature_flags.supports_feature(
+            self.sockets_metadata, target_sid, "supports_progress_text_metadata"
+        ):
+            prompt_id_bytes = (prompt_id or "").encode("utf-8")
+            message = (
+                struct.pack(">I", len(prompt_id_bytes))
+                + prompt_id_bytes
+                + struct.pack(">I", len(node_id_bytes))
+                + node_id_bytes
+                + text
+            )
+        else:
+            message = struct.pack(">I", len(node_id_bytes)) + node_id_bytes + text
+
+        self.send_sync(BinaryEventTypes.TEXT, message, target_sid)
