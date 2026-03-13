@@ -1011,3 +1011,49 @@ class TestExecution:
         """Test getting a non-existent job returns 404"""
         job = client.get_job("nonexistent-job-id")
         assert job is None, "Non-existent job should return None"
+
+
+    @pytest.mark.parametrize("text, expect_error", [
+        ("hello", False),       # 5 chars, within [3, 10]
+        ("abc", False),         # 3 chars, exact min boundary
+        ("abcdefghij", False),  # 10 chars, exact max boundary
+        ("ab", True),           # 2 chars, below min
+        ("abcdefghijk", True),  # 11 chars, above max
+        ("", True),             # 0 chars, below min
+    ])
+    def test_string_length_widget_validation(self, text, expect_error, client: ComfyClient, builder: GraphBuilder):
+        """Test minLength/maxLength validation for direct widget values (validate_inputs path)."""
+        g = builder
+        node = g.node("StubStringWithLength", text=text)
+        g.node("SaveImage", images=node.out(0))
+        if expect_error:
+            with pytest.raises(urllib.error.HTTPError) as exc_info:
+                client.run(g)
+            assert exc_info.value.code == 400
+        else:
+            client.run(g)
+
+
+    @pytest.mark.parametrize("text, expect_error", [
+        ("hello", False),       # 5 chars, within [3, 10]
+        ("abc", False),         # 3 chars, exact min boundary
+        ("abcdefghij", False),  # 10 chars, exact max boundary
+        ("ab", True),           # 2 chars, below min
+        ("abcdefghijk", True),  # 11 chars, above max
+        ("", True),             # 0 chars, below min
+    ])
+    def test_string_length_linked_validation(self, text, expect_error, client: ComfyClient, builder: GraphBuilder):
+        """Test minLength/maxLength validation for linked inputs (validate_resolved_inputs path)."""
+        g = builder
+        str_node = g.node("StubStringOutput", value=text)
+        node = g.node("StubStringWithLength", text=str_node.out(0))
+        g.node("SaveImage", images=node.out(0))
+
+        if expect_error:
+            try:
+                client.run(g)
+                assert False, "Should have raised an error"
+            except Exception as e:
+                assert 'prompt_id' in e.args[0], f"Did not get proper error message: {e}"
+        else:
+            client.run(g)

@@ -113,12 +113,48 @@ class StubFloat:
     def stub_float(self, value):
         return (value,)
 
+class StubStringOutput:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "value": ("STRING", {"default": ""}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "stub_string"
+
+    CATEGORY = "Testing/Stub Nodes"
+
+    def stub_string(self, value):
+        return (value,)
+
+class StubStringWithLength:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "text": ("STRING", {"default": "hello", "minLength": 3, "maxLength": 10}),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "stub_string_with_length"
+
+    CATEGORY = "Testing/Stub Nodes"
+
+    def stub_string_with_length(self, text):
+        return (torch.zeros(1, 64, 64, 3),)
+
 TEST_STUB_NODE_CLASS_MAPPINGS = {
     "StubImage": StubImage,
     "StubConstantImage": StubConstantImage,
     "StubMask": StubMask,
     "StubInt": StubInt,
     "StubFloat": StubFloat,
+    "StubStringOutput": StubStringOutput,
+    "StubStringWithLength": StubStringWithLength,
 }
 TEST_STUB_NODE_DISPLAY_NAME_MAPPINGS = {
     "StubImage": "Stub Image",
@@ -126,4 +162,6 @@ TEST_STUB_NODE_DISPLAY_NAME_MAPPINGS = {
     "StubMask": "Stub Mask",
     "StubInt": "Stub Int",
     "StubFloat": "Stub Float",
+    "StubStringOutput": "Stub String Output",
+    "StubStringWithLength": "Stub String With Length",
 }

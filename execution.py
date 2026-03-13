@@ -82,7 +82,7 @@ class IsChangedCache:
             return self.is_changed[node_id]
 
         # Intentionally do not use cached outputs here. We only want constants in IS_CHANGED
-        input_data_all, _, v3_data = get_input_data(node["inputs"], class_def, node_id, None)
+        input_data_all, _, v3_data, _ = get_input_data(node["inputs"], class_def, node_id, None)
         try:
             is_changed = await _async_map_node_over_list(self.prompt_id, node_id, class_def, input_data_all, is_changed_name, v3_data=v3_data)
             is_changed = await resolve_map_node_over_list_results(is_changed)
@@ -214,7 +214,35 @@ def get_input_data(inputs, class_def, unique_id, execution_list=None, dynprompt=
                 if h[x] == "API_KEY_COMFY_ORG":
                     input_data_all[x] = [extra_data.get("api_key_comfy_org", None)]
     v3_data["hidden_inputs"] = hidden_inputs_v3
-    return input_data_all, missing_keys, v3_data
+    return input_data_all, missing_keys, v3_data, valid_inputs
+
+def validate_resolved_inputs(input_data_all, class_def, valid_inputs):
+    """Validate resolved input values against schema constraints.
+
+    This is needed because validate_inputs() only sees direct widget values.
+    Linked inputs aren't resolved during validate_inputs(), so this runs after resolution to catch any violations.
+    """
+    for x, values in input_data_all.items():
+        input_type, input_category, extra_info = get_input_info(class_def, x, valid_inputs)
+        if input_type != "STRING":
+            continue
+        min_length = extra_info.get("minLength")
+        max_length = extra_info.get("maxLength")
+        if min_length is None and max_length is None:
+            continue
+        for val in values:
+            if val is None or not isinstance(val, str):
+                continue
+            if min_length is not None and len(val) < min_length:
+                raise ValueError(
+                    f"Input '{x}': value length {len(val)} is shorter than "
+                    f"minimum length of {min_length}"
+                )
+            if max_length is not None and len(val) > max_length:
+                raise ValueError(
+                    f"Input '{x}': value length {len(val)} is longer than "
+                    f"maximum length of {max_length}"
+                )
 
 map_node_over_list = None #Don't hook this please
 
@@ -470,7 +498,7 @@ async def execute(server, dynprompt, caches, current_item, extra_data, executed,
             has_subgraph = False
         else:
             get_progress_state().start_progress(unique_id)
-            input_data_all, missing_keys, v3_data = get_input_data(inputs, class_def, unique_id, execution_list, dynprompt, extra_data)
+            input_data_all, missing_keys, v3_data, valid_inputs = get_input_data(inputs, class_def, unique_id, execution_list, dynprompt, extra_data)
             if server.client_id is not None:
                 server.last_node_id = display_node_id
                 server.send_sync("executing", { "node": unique_id, "display_node": display_node_id, "prompt_id": prompt_id }, server.client_id)
@@ -498,6 +526,8 @@ async def execute(server, dynprompt, caches, current_item, extra_data, executed,
                     for i in required_inputs:
                         execution_list.make_input_strong_link(unique_id, i)
                     return (ExecutionResult.PENDING, None, None)
+
+            validate_resolved_inputs(input_data_all, class_def, valid_inputs)
 
             def execution_block_cb(block):
                 if block.message is not None:
@@ -963,6 +993,34 @@ async def validate_inputs(prompt_id, prompt, item, validated):
                     errors.append(error)
                     continue
 
+                if input_type == "STRING":
+                    if "minLength" in extra_info and len(val) < extra_info["minLength"]:
+                        error = {
+                            "type": "value_shorter_than_min_length",
+                            "message": "Value length {} shorter than min length of {}".format(len(val), extra_info["minLength"]),
+                            "details": f"{x}",
+                            "extra_info": {
+                                "input_name": x,
+                                "input_config": info,
+                                "received_value": val,
+                            }
+                        }
+                        errors.append(error)
+                        continue
+                    if "maxLength" in extra_info and len(val) > extra_info["maxLength"]:
+                        error = {
+                            "type": "value_longer_than_max_length",
+                            "message": "Value length {} longer than max length of {}".format(len(val), extra_info["maxLength"]),
+                            "details": f"{x}",
+                            "extra_info": {
+                                "input_name": x,
+                                "input_config": info,
+                                "received_value": val,
+                            }
+                        }
+                        errors.append(error)
+                        continue
+
                 if isinstance(input_type, list) or input_type == io.Combo.io_type:
                     if input_type == io.Combo.io_type:
                         combo_options = extra_info.get("options", [])
@@ -994,7 +1052,7 @@ async def validate_inputs(prompt_id, prompt, item, validated):
                         continue
 
     if len(validate_function_inputs) > 0 or validate_has_kwargs:
-        input_data_all, _, v3_data = get_input_data(inputs, obj_class, unique_id)
+        input_data_all, _, v3_data, _ = get_input_data(inputs, obj_class, unique_id)
         input_filtered = {}
         for x in input_data_all:
             if x in validate_function_inputs or validate_has_kwargs:
