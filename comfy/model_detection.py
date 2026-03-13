@@ -1094,6 +1094,12 @@ def convert_diffusers_mmdit(state_dict, output_prefix=""):
         num_blocks = count_blocks(state_dict, 'transformer_blocks.{}.')
         depth = state_dict["pos_embed.proj.weight"].shape[0] // 64
         sd_map = comfy.utils.mmdit_to_diffusers({"depth": depth, "num_blocks": num_blocks}, output_prefix=output_prefix)
+    elif 'all_x_embedder.2-1.weight' in state_dict: #Z-Image (HuggingFace format)
+        w = state_dict.get('cap_embedder.1.weight')
+        hidden_size = w.shape[0] if w is not None else 3840
+        n_layers = count_blocks(state_dict, 'layers.{}.')
+        n_refiner = count_blocks(state_dict, 'noise_refiner.{}.')
+        sd_map = comfy.utils.z_image_to_diffusers({"n_layers": n_layers, "n_refiner_layers": n_refiner, "dim": hidden_size}, output_prefix=output_prefix)
     else:
         return None
 

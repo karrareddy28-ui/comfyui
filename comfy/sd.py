@@ -1715,6 +1715,12 @@ def load_diffusion_model_state_dict(sd, model_options={}, metadata=None, disable
 
     if model_config is not None:
         new_sd = sd
+        # Z-Image from HuggingFace uses diffusers-style key names that need conversion
+        if model_config.unet_config.get('z_image_modulation', False) and 'all_x_embedder.2-1.weight' in new_sd:
+            sd_copy = dict(new_sd)
+            converted = model_detection.convert_diffusers_mmdit(sd_copy, "")
+            if converted is not None:
+                new_sd = {**sd_copy, **converted}
     else:
         new_sd = model_detection.convert_diffusers_mmdit(sd, "")
         if new_sd is not None: #diffusers mmdit

@@ -429,9 +429,11 @@ def calculate_weight(patches, weight, key, intermediate_dtype=torch.float32, ori
             if output is None:
                 logging.warning("Calculate Weight Failed: {} {}".format(v.name, key))
             else:
-                weight = output
                 if old_weight is not None:
+                    old_weight.narrow(offset[0], offset[1], offset[2]).copy_(output)
                     weight = old_weight
+                else:
+                    weight = output
             continue
 
         if len(v) == 1:

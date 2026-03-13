@@ -688,6 +688,7 @@ class NextDiT(nn.Module):
                 embeds += (siglip_feats,)
                 freqs_cis += (self.rope_embedder(siglip_pos_ids).movedim(1, 2),)
 
+        x = comfy.ldm.common_dit.pad_to_patch_size(x, (pH, pW))
         B, C, H, W = x.shape
         x = self.x_embedder(x.view(B, C, H // pH, pH, W // pW, pW).permute(0, 2, 4, 3, 5, 1).flatten(3).flatten(1, 2))
         x_pos_ids = pos_ids_x(cap_feats_len + 1, H // pH, W // pW, bsz, device, transformer_options=transformer_options)
